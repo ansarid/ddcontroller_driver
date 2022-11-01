@@ -1,0 +1,23 @@
+<launch>
+    <!--
+        'is_physical' is defined here so that calling launch files can just add the parameter
+        without checking. This moduleN
+    -->
+    <arg name="is_physical" default="true"/>
+
+    <arg name="ddcontroller_driver_cmd_vel_topic" default="/cmd_vel" />
+    <arg name="ddcontroller_driver_odom_topic" default="odom" />
+
+    <!--
+        Start the supervisor node
+
+    -->
+    <node
+        name="ddcontroller_driver"
+        pkg="ddcontroller_driver"
+        type="ddcontroller_driver.py"
+        output="screen">
+        <remap from="cmd_vel" to="$(arg ddcontroller_driver_cmd_vel_topic)"/>
+        <remap from="odom" to="$(arg ddcontroller_driver_odom_topic)"/>
+    </node>
+</launch>
