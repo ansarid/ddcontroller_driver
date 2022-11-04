@@ -4,14 +4,13 @@ import rospy
 import numpy as np
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import JointState
-from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3, PoseWithCovarianceStamped
+from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3, PoseStamped, PoseWithCovarianceStamped
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from std_msgs.msg import Header
 from ddcontroller import DDRobot
 
 def commandVelocity(msg):
 
-    # rospy.loginfo("Linear Velocity: "+str(round(msg.linear.x, 3))+" \tAngular Velocity: "+str(round(msg.angular.z, 3)))
     robot.set_motion([msg.linear.x, msg.angular.z])
 
 def updatePose(msg):
@@ -26,6 +25,24 @@ def updatePose(msg):
     robot.define_heading(yaw)
     robot.define_global_position([position.x, position.y])
 
+def navigate(msg):
+
+    pose = msg.pose
+    orientation = pose.orientation
+    position = pose.position
+
+    orientation_list = [orientation.x, orientation.y, orientation.z, orientation.w]
+    (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
+
+    robot.go_to([position.x, position.y], tolerance=0.1, max_linear_velocity=0.3, max_angular_velocity=1)
+
+    while robot.running and not robot.reached_target_position:
+        r.sleep()
+
+    robot.control_level = 1
+    # robot.set_heading(yaw)
+    robot.set_motion([0,0])
+
 if __name__=="__main__":
 
     robot = DDRobot()
@@ -39,6 +56,7 @@ if __name__=="__main__":
 
     rospy.Subscriber("/cmd_vel", Twist, commandVelocity)
     rospy.Subscriber("/initialpose", PoseWithCovarianceStamped, updatePose)
+    rospy.Subscriber("/move_base_simple/goal", PoseStamped, navigate)
 
     odom_pub = rospy.Publisher("odom", Odometry, queue_size=50)
     if enable_tf_publish is True:
@@ -88,8 +106,6 @@ if __name__=="__main__":
             # Publish joint state when enable_joint_state_publish is true
             if enable_joint_state_publish is True:
                 myJointStatePublisher = rospy.Publisher('joint_states', JointState, queue_size=10)
-                # pub = rospy.Publisher('joint_states', JointState, queue_size=10)
-                # rospy.init_node('joint_state_publisher')
                 jointState = JointState()
 
                 jointState.header = Header()
